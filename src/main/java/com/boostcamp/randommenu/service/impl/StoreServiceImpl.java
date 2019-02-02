@@ -1,5 +1,6 @@
 package com.boostcamp.randommenu.service.impl;
 
+import com.boostcamp.randommenu.dto.Store;
 import com.boostcamp.randommenu.mapper.StoreMapper;
 import com.boostcamp.randommenu.dto.DefaultRes;
 import com.boostcamp.randommenu.model.MenuInfo;
@@ -12,8 +13,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
-
-import javax.validation.Valid;
 
 
 @Slf4j
@@ -31,18 +30,29 @@ public class StoreServiceImpl implements StoreService {
     @Override
     public DefaultRes saveStoreInfo(final StoreInfo storeInfo) {
         try {
-            //업주 정보만 저장
-            storeMapper.saveStoreInfo(storeInfo);
+            int storeNum = storeMapper.checkStoreByOwnerId(storeInfo.getOwnerId());
 
-            int storeIdx = storeInfo.getStoreIdx();
+            if(storeNum > 0) {
+                //업주 정보만 저장
+                storeMapper.saveStoreInfo(storeInfo);
 
-            //사진이 있는 경우 메뉴 정보도 저장
-            for(MenuInfo menuInfo : storeInfo.getMenuInfoList()) {
-                if(menuInfo.getPhoto() != null)
-                    saveMenuInfo(menuInfo, storeIdx);
+                int storeIdx = storeInfo.getStoreIdx();
+
+                if (storeInfo.getMenuInfoList() != null) {
+                    //사진이 있는 경우 메뉴 정보도 저장
+                    for (MenuInfo menuInfo : storeInfo.getMenuInfoList()) {
+                        if (menuInfo.getPhoto() != null) {
+                            String url = s3FileUploadService.upload(menuInfo.getPhoto());
+                            storeMapper.saveMenuInfo(menuInfo, storeIdx, url);
+                        }
+                    }
+                    return DefaultRes.res(HttpStatus.OK.value(), Message.SAVE_STORE_MENU_SUCCESS);
+                }
+                return DefaultRes.res(HttpStatus.OK.value(), Message.SAVE_STORE_SUCCESS);
             }
+            else
+                return DefaultRes.res(HttpStatus.NOT_FOUND.value(), Message.NOT_FOUND_STORE);
 
-            return DefaultRes.res(HttpStatus.OK.value(), Message.SAVE_STORE_SUCCESS);
          } catch(Exception e) {
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             log.error(e.getMessage());
@@ -50,19 +60,19 @@ public class StoreServiceImpl implements StoreService {
         }
     }
 
-    @Transactional
     @Override
-    public DefaultRes saveMenuInfo(@Valid final MenuInfo menuInfo, final int storeIdx) {
-        try {
-            String url = s3FileUploadService.upload(menuInfo.getPhoto());
-            storeMapper.saveMenuInfo(menuInfo, storeIdx, url);
+    public DefaultRes getStoreInfo(final int storeIdx) {
+        int storeNum = storeMapper.checkStoreByStoreIdx(storeIdx);
 
-            return DefaultRes.res(HttpStatus.OK.value(), Message.SAVE_STORE_MENU_SUCCESS);
-        } catch(Exception e) {
-            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-            log.error(e.getMessage());
-            return DefaultRes.res(DefaultRes.DB_ERROR, Message.DB_ERROR);
+        if(storeNum > 0 ) {
+            final Store store = storeMapper.getStoreInfo(storeIdx);
+            store.setMenuList(storeMapper.getMenuListInfo(storeIdx));
+
+            return DefaultRes.res(HttpStatus.OK.value(), Message.GET_STORE_MENULIST_SUCCESS, store);
         }
-
+        else
+            return DefaultRes.res(HttpStatus.NOT_FOUND.value(), Message.NOT_FOUND_STORE);
     }
+
+
 }

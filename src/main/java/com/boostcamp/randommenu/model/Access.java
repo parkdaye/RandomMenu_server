@@ -10,4 +10,8 @@ public class Access {
     @NotNull
     @NotEmpty
     private String accessKey;
+
+    @NotNull
+    @NotEmpty
+    private String ownerId;
 }

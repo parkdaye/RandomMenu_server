@@ -25,9 +25,8 @@ public class OwnerServiceImpl implements OwnerService {
     @Override
     public DefaultRes login(final String ownerId) {
         int storeCount = ownerMapper.checkStoreExisted(ownerId);
-        if(storeCount == 0) {
-            return createOwner(ownerId);
-        }
+        if(storeCount == 0)
+            return DefaultRes.res(HttpStatus.NO_CONTENT.value(), Message.NOT_FOUND_ID);
 
         return DefaultRes.res(HttpStatus.OK.value(), Message.LOGIN_SUCCESS);
     }
@@ -64,7 +63,7 @@ public class OwnerServiceImpl implements OwnerService {
     }
 
     @Override
-    public DefaultRes matchKey(final String accessKey) {
+    public DefaultRes matchKey(final String accessKey, final String ownerId) {
         Boolean isUsed = false;
 
         int keyCount = ownerMapper.countKey(accessKey);
@@ -76,7 +75,7 @@ public class OwnerServiceImpl implements OwnerService {
             return DefaultRes.res(HttpStatus.NO_CONTENT.value(), Message.MATCH_KEY_FAIL);
         } else {
             ownerMapper.setkeyUsed(1, accessKey);
-            return DefaultRes.res(HttpStatus.OK.value(), Message.MATCH_KEY_SUCCESS);
+            return createOwner(ownerId);
         }
     }
 

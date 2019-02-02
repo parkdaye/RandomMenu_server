@@ -10,5 +10,5 @@ public interface OwnerService  {
 
     String makeAccessKey();
 
-    DefaultRes matchKey(final String accessKey);
+    DefaultRes matchKey(final String accessKey, final String ownerId);
 }
